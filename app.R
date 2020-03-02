@@ -9,7 +9,7 @@ load("data/mendota.RData")
 
 ui <- fluidPage(
     titlePanel("GLMviz"),
-    'Visualization of the flexible Lagrangian layer setup of GLM (General Lake Model) by Tadhg Moore and Robert Ladwig',
+    'Visualization of the flexible Lagrangian layer setup of GLM (General Lake Model), by Tadhg Moore and Robert Ladwig',
     strong("Move the sliders to look at a different timestamp:"),
     sidebarLayout(
         sidebarPanel(
@@ -35,21 +35,29 @@ server <- function(input, output) {
         z <- -z
         z <- min(z) - z
         temp <- sim_temp[!is.na(sim_temp[,ix]),ix]
+        
+        if (sim_ice[ix] > 0){
+            z <- z + sim_ice[ix]
+            z <- c(z, 0)
+            temp <- c(temp, -50)
+        }
+        
         rbPal <- colorRampPalette(c('blue','red'))
         col <- rbPal(10)[as.numeric(cut(temp,breaks = 10))]
+        col[is.na(col)] <- "#FFFFFF"
         # col = rs(temp)
         dat <- data.frame('z' = z, 'temp' = temp, 'colfill' = col,
                           'x1' = rep(0,length(z)), 'x2' = rep(2,length(z)), 'x3' = approx(hyps$depth, hyps$area, xout = z)$y,
                           'y1' = c(0,z[-length(z)]), 'y2' = z)
 
         ggplot() +
-            geom_point(data = met2, aes(x = (max(dat$x3)/2), y = 5, colour = ShortWave), size = 20)+
+            geom_point(data = met2, aes(x = (max(dat$x3, na.rm = TRUE)/2), y = 5, colour = ShortWave), size = 20)+
             geom_rect(data = dat, mapping = aes(xmin =x1,xmax =x3,ymin =y1, ymax =y2, fill = temp), color = 'black') +
-            geom_rect(data = met2, mapping = aes(xmin =0,xmax =max(dat$x3),ymin =0, ymax =2, fill = temp), color = 'grey') +
-            geom_segment(data = met2, aes(x =0, xend = ((WindSpeed/10)*max(dat$x3)), y = 1, yend = 1), size = 2,
+            geom_rect(data = met2, mapping = aes(xmin =0,xmax =max(dat$x3, na.rm = TRUE),ymin =0, ymax =2, fill = temp), color = 'grey') +
+            geom_segment(data = met2, aes(x =0, xend = ((WindSpeed/10)*max(dat$x3, na.rm = TRUE)), y = 1, yend = 1), size = 2,
                          arrow = arrow(length = unit(0.5, "cm")))+
             geom_hline(yintercept = 0, linetype = 'dashed', colour = 'black')+
-            scale_fill_gradientn(colours = cols, limits = c(-1,31), name = 'Temperature (\u00B0C)')+
+            scale_fill_gradientn(colours = cols, limits = c(-10,35), name = 'Temperature (\u00B0C)')+
             scale_color_gradient2(limits = c(0,840), low = 'white',mid = 'white', high = 'red', midpoint = 100)+
             xlab('')+
             ylab('Depth (m)')+
